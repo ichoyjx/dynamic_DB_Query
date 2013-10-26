@@ -1,0 +1,187 @@
+<%-- 
+    Document   : index
+    Created on : 2011-10-17, 19:22:34
+    Author     : dmzhou
+--%>
+<%@ page pageEncoding="GB2312" %>
+<%@page import="java.util.*" %>
+<%@page import="java.sql.*" %>
+<%//定义数据
+    class fieldInfo {
+
+        String name;
+        int fieldType;
+        int Type;
+        String Operator;
+        //Type的定义:
+        //数字 :1
+        //字符串:2
+        //逻辑值:3
+        //日期:4
+        //Operator的定义:操作符1#操作符2#...
+    }
+    class tableInfo {
+
+        String tableName;
+        List<fieldInfo> field = new LinkedList<fieldInfo>();
+    }
+%>
+<%//获取数据库中各个信息
+    String sqlConn = "Admin\n123456";//格式：用户名\n密码
+    Connection Conn;
+    List<tableInfo> tables = new LinkedList<tableInfo>();//存储所有信息
+    try {
+        Class.forName("sun.jdbc.odbc.JdbcOdbcDriver");
+        /**
+         * 直接连接access文件。
+         */
+        String dbur1 = "jdbc:odbc:OAsys;";//需要设置数据源
+        String user = sqlConn.substring(0, sqlConn.indexOf("\n"));
+        String psw = sqlConn.substring(sqlConn.indexOf("\n") + 1);
+        Properties prop = new Properties();
+        prop.put("charSet", "gb2312");
+        prop.put("user", user);
+        prop.put("password", psw);
+        Conn = DriverManager.getConnection(dbur1, prop);
+        //out.print("连接数据库成功<br>");
+        DatabaseMetaData dbmd = Conn.getMetaData();
+        ResultSet rs = dbmd.getTables(null, null, "%", null);
+        while (rs.next()) {
+            if (rs.getString(4).equals("TABLE")) {
+                String tableName = rs.getString(3);
+                //out.print("table-name:  "+tableName+"<br>");  
+                tableInfo table = new tableInfo();
+                table.tableName = tableName;
+                ResultSet columns = dbmd.getColumns(null, null, tableName, null);
+                while (columns.next()) {
+                    String fieldName = columns.getString(4);
+                    int fieldType = columns.getInt(5);
+                    // out.print("列名称:"+fieldName+"，列属性"+fieldType+"<br>");
+                    fieldInfo field = new fieldInfo();
+                    field.name = fieldName;
+                    field.fieldType = fieldType;
+                    field.Type = 0;
+                    table.field.add(field);
+                }
+                tables.add(table);
+            }
+        }
+        Conn.close();
+    } catch (Exception e) {
+        //out.println(e.toString() + "连接数据库失败！");
+    }
+
+%>
+<%//处理获取的数据
+    for (int i = 0; i < tables.size(); i++) {
+        for (int j = 0; j < tables.get(i).field.size(); j++) {
+            int FT = tables.get(i).field.get(j).fieldType;
+            if (FT == -7 || FT == -6 || FT == 2 || FT == 3 || FT == 4 || FT == 5 || FT == 6 || FT == 7 || FT == 8) {
+                tables.get(i).field.get(j).Type = 1;
+                tables.get(i).field.get(j).Operator = "=#>#<#>=#<=#!=#";
+            } else if (FT == -16 || FT == -15 || FT == -9 || FT == -1 || FT == 1 || FT == 12) {
+                tables.get(i).field.get(j).Type = 2;
+                tables.get(i).field.get(j).Operator = "=#包含#";
+            } else if (FT == 16) {
+                tables.get(i).field.get(j).Type = 3;
+                tables.get(i).field.get(j).Operator = "=#";
+            } else if (FT == 91 || FT == 92 || FT == 93) {
+                tables.get(i).field.get(j).Type = 4;
+                tables.get(i).field.get(j).Operator = "之前#精确#之后#";
+            } else {
+                tables.get(i).field.remove(j);
+            }
+        }
+    }
+    /*for(int i=0;i<tables.size();i++){
+    out.print("表名称:"+tables.get(i).tableName+"<br>");
+    for(int j=0;j<tables.get(i).field.size();j++){
+    out.print("&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp字段名称:"+tables.get(i).field.get(j).name+",字段类型:"+tables.get(i).field.get(j).fieldType
+    +",类型:"+tables.get(i).field.get(j).Type+"<br>");
+    }
+    }*/
+
+%>
+<%! // 生成随机颜色
+    private static Random randGen = null;
+    private static char[] numbersAndLetters = null;
+
+    public static final String randomColor() {
+        if (randGen == null) {
+            randGen = new Random();
+            numbersAndLetters = ("01B2AD789E345CF6" + "04d8ae192b53c67f"
+                    + "0c34eF56B7D129a8" + "96b50C4E32d871Af").toCharArray();
+        }
+        char[] randBuffer = new char[5];
+        for (int i = 0; i < randBuffer.length; i++) {
+            randBuffer[i] = numbersAndLetters[randGen.nextInt(64)];
+        }
+        String bgcolor = "#F" + randBuffer;
+        return new String(bgcolor);
+    }
+%>
+
+<%!            class SQLQuery {
+
+        String sqlStr;
+        String sqlConn;
+        String dburl;
+
+        SQLQuery(String sqlStr, String sqlConn, String dburl) {
+            this.dburl = dburl;
+            this.sqlConn = sqlConn;
+            this.sqlStr = sqlStr;
+        }
+
+        ResultSet getResult() {
+            Connection Conn;
+            ResultSet rs = null;
+            try {
+                Class.forName("sun.jdbc.odbc.JdbcOdbcDriver");
+                /**
+                 * 直接连接access文件。
+                 */
+                String user = sqlConn.substring(0, sqlConn.indexOf("\n"));
+                String psw = sqlConn.substring(sqlConn.indexOf("\n") + 1);
+                Properties prop = new Properties();
+                prop.put("charSet", "gb2312");
+                prop.put("user", user);
+                prop.put("password", psw);
+                Conn = DriverManager.getConnection(dburl, prop);
+                Statement stmt = Conn.createStatement();
+                System.out.print("连接数据库成功<br>");
+                rs = stmt.executeQuery(sqlStr);
+            } catch (Exception ex) {
+                System.out.print(ex);
+            }
+            return rs;
+        }
+    }
+%>
+
+<%!  class RandomColor {
+
+        String[] ColorSet = new String[10];
+
+        RandomColor() {
+            ColorSet[0] = "#CCFFFF";
+            ColorSet[1] = "#CCFF33";
+            ColorSet[2] = "#FF99FF";
+            ColorSet[3] = "#FFFF66";
+            ColorSet[4] = "#CCFF99";
+            ColorSet[5] = "#CCFFFF";
+            ColorSet[6] = "#FF66FF";
+            ColorSet[7] = "#CC66CC";
+            ColorSet[8] = "#FF6633";
+            ColorSet[9] = "#99CC33";
+        }
+
+        String GetRandomColor() {
+            Random rnd = new Random();
+            return ColorSet[rnd.nextInt(10)];
+        }
+    }
+%>
+
+<%!    String dbur1 = "jdbc:odbc:OAsys;";//需要设置数据源
+%>
